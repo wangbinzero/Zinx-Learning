@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -12,6 +13,17 @@ type Server struct {
 	IP        string //服务器监听的IP
 	Port      int    //服务器绑定端口
 
+}
+
+//定义当前客户端连接所绑定的handlerFunc,后面应该由客户端去自定义该方法
+func CallBack(conn *net.TCPConn, data []byte, n int) error {
+	//回显
+	fmt.Println("[callback] message is : ", string(data))
+	if _, err := conn.Write(data[:n]); err != nil {
+		fmt.Println("write back message error: ", err)
+		return errors.New("callback error")
+	}
+	return nil
 }
 
 //初始化
@@ -51,27 +63,35 @@ func (s *Server) Start() {
 			continue
 		}
 
-		//读取套接字
-		go func() {
-			for {
-				//每次读取512字节
-				buf := make([]byte, 512)
-				n, err := conn.Read(buf)
-				if err != nil {
-					fmt.Println("receive buf error: ", err)
-					continue
-				}
+		//V1.0 读取套接字
+		//go func() {
+		//	for {
+		//		//每次读取512字节
+		//		buf := make([]byte, 512)
+		//		n, err := conn.Read(buf)
+		//		if err != nil {
+		//			fmt.Println("receive buf error: ", err)
+		//			continue
+		//		}
+		//
+		//		//打印读取到的套接字信息
+		//		fmt.Println("receive message from client: ", string(buf))
+		//
+		//		//回写套接字信息
+		//		if _, err := conn.Write(buf[:n]); err != nil {
+		//			fmt.Println("write back buf error: ", err)
+		//			continue
+		//		}
+		//	}
+		//}()
+		var connID uint32
+		connID = 0
+		//将处理所连接的业务方法和conn进行绑定，得到我们的连接模块
+		dealConn := NewConnection(conn, connID, CallBack)
+		connID++
 
-				//打印读取到的套接字信息
-				fmt.Println("receive message from client: ", string(buf))
-
-				//回写套接字信息
-				if _, err := conn.Write(buf[:n]); err != nil {
-					fmt.Println("write back buf error: ", err)
-					continue
-				}
-			}
-		}()
+		//启动
+		go dealConn.Start()
 	}
 
 }
