@@ -33,7 +33,7 @@ func init() {
 	}
 
 	//尝试从config.json 加载
-	BaseConfig.Reload()
+	//BaseConfig.Reload()
 }
 
 //尝试从配置文件加载参数
