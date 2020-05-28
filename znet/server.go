@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"Zinx-Learning/utils"
 	"Zinx-Learning/ziface"
 	"fmt"
 	"net"
@@ -17,13 +18,13 @@ type Server struct {
 }
 
 //初始化
-func NewServer(name string) ziface.IServer {
+func NewServer() ziface.IServer {
 
 	s := &Server{
-		Name:      name,
+		Name:      utils.BaseConfig.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8999,
+		IP:        utils.BaseConfig.Host,
+		Port:      utils.BaseConfig.TcpPort,
 		Router:    nil,
 	}
 	return s
