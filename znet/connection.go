@@ -1,9 +1,9 @@
 package znet
 
 import (
-	"Zinx-Learning/utils"
 	"Zinx-Learning/ziface"
 	"fmt"
+	"io"
 	"net"
 )
 
@@ -77,13 +77,40 @@ func (c *Connection) StartRead() {
 
 	for {
 		//读取客户端的数据到buf中，最大512字节
-		buf := make([]byte, utils.BaseConfig.MaxPackageSize)
+		//buf := make([]byte, utils.BaseConfig.MaxPackageSize)
+		//
+		//_, err := c.Conn.Read(buf)
+		//if err != nil {
+		//	fmt.Println("receive message error: ", err)
+		//	continue
+		//}
 
-		_, err := c.Conn.Read(buf)
-		if err != nil {
-			fmt.Println("receive message error: ", err)
-			continue
+		//创建拆包/解包 对象
+		dp := NewDataPack()
+
+		//读取客户端的msg  head
+		headData := make([]byte, dp.GetHeadLen())
+		if _, err := io.ReadFull(c.GetTCPConnection(), headData); err != nil {
+			fmt.Println("read msgHead error: ", err)
+			break
 		}
+
+		msg, err := dp.UnPack(headData)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		var data []byte
+		if msg.GetMsgLen() > 0 {
+			data = make([]byte, msg.GetMsgLen())
+			if _, err := io.ReadFull(c.GetTCPConnection(), data); err != nil {
+				fmt.Println(err)
+				break
+			}
+		}
+
+		msg.SetData(data)
 
 		//TODO 改为调用路由方法
 		//调用当前连接锁绑定的handlerFunc
@@ -93,7 +120,7 @@ func (c *Connection) StartRead() {
 		//	break
 		//}
 		//获取request数据
-		req := Request{conn: c, data: buf}
+		req := Request{conn: c, msg: msg}
 
 		//执行注册路由方法
 		go func(request ziface.IRequest) {
